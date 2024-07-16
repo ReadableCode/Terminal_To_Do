@@ -1,0 +1,15 @@
+pygsheets
+numpy
+requests
+datetime
+ipykernel
+pyarrow
+pytest
+python-dotenv
+tqdm
+streamlit
+black
+isort
+flake8
+tabulate
+pandas

@@ -4,9 +4,23 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+pygsheets = "*"
+numpy = "*"
+requests = "*"
+datetime = "*"
+ipykernel = "*"
+pyarrow = "*"
+pytest = "*"
+python-dotenv = "*"
+tqdm = "*"
+streamlit = "*"
+black = "*"
+isort = "*"
+flake8 = "*"
+tabulate = "*"
+pandas = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.12"
-python_full_version = "3.12.4"

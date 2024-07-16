@@ -38,12 +38,26 @@ pyenv shell 3.12.4
 
 ```bash
 pip install pipenv
-$env:PIPENV_PYTHON = (pyenv which python); pipenv install
+pipenv install
 
 ```
 
-- Activate the virtual environment
+- To Activate or Source the environment and not have to prepend each command with pipenv:
 
-```bash
-pipenv activate
-```
+  On Linux:
+
+  ```bash
+  source $(pipenv --venv)/bin/activate
+  ```
+  
+  On Windows (Powershell):
+
+  ```bash
+  & "$(pipenv --venv)\Scripts\activate.ps1"
+  ```
+
+- To Deactivate:
+
+  ```bash
+  deactivate
+  ```
