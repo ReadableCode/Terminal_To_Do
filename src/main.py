@@ -1,9 +1,10 @@
 # %%
 
 import os
+import sys
 
 import pandas as pd
-from utils.display_tools import pprint_df, pprint_dict, pprint_ls
+from utils.display_tools import pprint_df, pprint_dict
 from utils.sqlite_tools import (
     add_task,
     create_connection,
@@ -18,7 +19,9 @@ from utils.sqlite_tools import (
 
 grandparent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 data_dir = os.path.join(grandparent_dir, "data")
-ls_swim_lanes = ["backlog", "todo", "prog", "done"]
+ls_swim_lanes = ["priority", "backlog", "todo", "prog", "done"]
+
+print(f"Python Version: {sys.version}")
 
 
 # %%
@@ -27,7 +30,6 @@ ls_swim_lanes = ["backlog", "todo", "prog", "done"]
 
 def print_tasks(conn):
     df_tasks = get_tasks(conn)
-    pprint_df(df_tasks)
 
     df_display_tasks = pd.DataFrame(columns=ls_swim_lanes)
     for i, row in df_tasks.iterrows():
@@ -35,9 +37,15 @@ def print_tasks(conn):
         category = row["category"]
         title = row["title"]
         status = row["status"]
+        priority = row["priority"]
         df_display_tasks.loc[i, status] = f"({task_id}) {category} - {title}"
+        df_display_tasks.loc[i, "priority"] = priority
+
+    # sort by priority
+    df_display_tasks.sort_values(by="priority", inplace=True)
+
     df_display_tasks.fillna("", inplace=True)
-    pprint_df(df_display_tasks, showindex=True)
+    pprint_df(df_display_tasks)
 
 
 def print_task_details(conn, task_id):
