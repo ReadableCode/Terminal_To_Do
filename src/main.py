@@ -9,6 +9,7 @@ from utils.sqlite_tools import (
     add_task,
     backup_database_as_csv,
     create_connection,
+    edit_task,
     get_task_details,
     get_tasks,
     initialize_database,
@@ -60,10 +61,39 @@ def change_task_status(conn, task_id, status):
     print(f"Task {task_id} status updated to {status}.")
 
 
+def edit_a_task(conn, task_id):
+    task = get_task_details(conn, task_id)
+    pprint_dict(task)
+
+    # get priority
+    priority = task["priority"]
+    priority = int(input(f"Enter the priority (default:[{priority}]): ") or priority)
+
+    # get category
+    category = task["category"]
+    category = input(f"Enter the category (default:[{category}]): ") or category
+
+    # get title
+    title = task["title"]
+    title = input(f"Enter the title (default:[{title}]): ") or title
+
+    # get description
+    description = task["description"]
+    description = (
+        input(f"Enter the description (default:[{description}]): ") or description
+    )
+
+    # get status
+    status = task["status"]
+    status = input(f"Enter the status (default:[{status}]): ") or status
+
+    edit_task(conn, task_id, priority, category, title, description, status)
+
+
 def add_task_wizard(conn):
     # get priority default 2
     priority = 2
-    priority = int(input(f"Enter the priority (default {priority}): ") or priority)
+    priority = int(input(f"Enter the priority (default:[{priority}]): ") or priority)
 
     # get category
     category = ""
@@ -78,7 +108,7 @@ def add_task_wizard(conn):
 
     # get status default "backlog"
     status = "backlog"
-    status = input(f"Enter the status (default {status}): ") or status
+    status = input(f"Enter the status (default:[{status}]): ") or status
 
     add_task(conn, priority, category, title, description, status)
 
@@ -98,17 +128,21 @@ def process_cli_command(conn, command):
         change_task_status(conn, task_id, status)
     elif command == "add":
         add_task_wizard(conn)
+    elif command.startswith("edit "):
+        task_id = int(command.split(" ")[1])
+        edit_a_task(conn, task_id)
     else:
         print("Invalid command.")
 
 
 def print_help_text():
     print("Commands:")
-    print("print - print tasks")
-    print("cat <task_id> - print task details")
-    print("mv <task_id> <status> - move task to status")
-    print("add - add a task")
-    print("exit - exit the program")
+    print("print -- print tasks")
+    print("cat <task_id> -- print task details")
+    print("mv <task_id> <status> -- move task to status")
+    print("add -- add a task")
+    print("exit -- exit the program")
+    print("edit <task_id> -- edit a task")
     print("")
 
 

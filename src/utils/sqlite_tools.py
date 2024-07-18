@@ -87,6 +87,30 @@ def add_task(conn, priority, category, title, description, status):
     print("Task added successfully.")
 
 
+def edit_task(conn, task_id, priority, category, title, description, status):
+    """Edit an existing task in the tasks table.
+
+    Args:
+        conn (sqlite3.Connection): The SQLite database connection.
+        task_id (int): The id of the task to edit.
+        priority (int): The priority of the task.
+        category (str): The category of the task.
+        title (str): The title of the task.
+        description (str): The description of the task.
+        status (str): The status of the task.
+
+    """
+    sql = """
+    UPDATE tasks 
+    SET priority = ?, category = ?, title = ?, description = ?, status = ?
+    WHERE id = ?;
+    """
+    cursor = conn.cursor()
+    cursor.execute(sql, (priority, category, title, description, status, task_id))
+    conn.commit()
+    print("Task edited successfully.")
+
+
 def get_tasks(conn):
     """Retrieve all tasks from the tasks table as a list of dictionaries."""
     sql = """SELECT * FROM tasks;"""
@@ -104,6 +128,15 @@ def get_task_details(conn, task_id):
     cursor = conn.cursor()
     cursor.execute(sql, (task_id,))
     task = cursor.fetchone()
+    # convert to dict
+    task = {
+        "id": task[0],
+        "priority": task[1],
+        "category": task[2],
+        "title": task[3],
+        "description": task[4],
+        "status": task[5],
+    }
     return task
 
 
