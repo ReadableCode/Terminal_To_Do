@@ -41,10 +41,11 @@ def print_tasks(conn):
         df_display_tasks.loc[i, status] = f"({task_id}) {category} - {title}"
         df_display_tasks.loc[i, "priority"] = priority
 
-    # sort by priority
-    df_display_tasks.sort_values(by="priority", inplace=True)
+    df_display_tasks = df_display_tasks.sort_values(by="priority")
 
-    df_display_tasks.fillna("", inplace=True)
+    # Use infer_objects() to infer better types
+    df_display_tasks = df_display_tasks.infer_objects()
+    df_display_tasks = df_display_tasks.fillna("")
     pprint_df(df_display_tasks)
 
 
@@ -100,6 +101,16 @@ def process_cli_command(conn, command):
         print("Invalid command.")
 
 
+def print_help_text():
+    print("Commands:")
+    print("print - print tasks")
+    print("cat <task_id> - print task details")
+    print("mv <task_id> <status> - move task to status")
+    print("add - add a task")
+    print("exit - exit the program")
+    print("")
+
+
 # %%
 # Main #
 
@@ -113,12 +124,14 @@ def main():
     conn = create_connection(database)
     if conn is not None:
         print_tasks(conn)
+        print_help_text()
         while True:
             command = input("Enter a command: ")
             process_cli_command(conn, command)
             if command == "exit":
                 break
             print_tasks(conn)
+            print_help_text()
         conn.close()
 
 

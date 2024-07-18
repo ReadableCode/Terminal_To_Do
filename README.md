@@ -4,10 +4,10 @@
 
 ### Windows pyenv setup
 
-- Use winget to install pyenv-win
+- Use chocolotey to install pyenv-win
 
 ```bash
-winget install --id=pyenv-win.pyenv-win
+choco install pyenv-win
 ```
 
 - Install python 3.12
@@ -34,30 +34,8 @@ pyenv local 3.12.4
 pyenv shell 3.12.4
 ```
 
-- Use pipenv to install dependencies
+- Install dependencies into this version of python
 
 ```bash
-pip install pipenv
-pipenv install
-
+python3 -m pip install -r requirements.txt
 ```
-
-- To Activate or Source the environment and not have to prepend each command with pipenv:
-
-  On Linux:
-
-  ```bash
-  source $(pipenv --venv)/bin/activate
-  ```
-  
-  On Windows (Powershell):
-
-  ```bash
-  & "$(pipenv --venv)\Scripts\activate.ps1"
-  ```
-
-- To Deactivate:
-
-  ```bash
-  deactivate
-  ```
