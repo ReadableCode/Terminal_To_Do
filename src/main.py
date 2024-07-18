@@ -151,22 +151,24 @@ def print_help_text():
 
 
 def main():
-
     database = os.path.join(data_dir, "tasks.db")
     initialize_database(database)
-
-    # Sample usage
     conn = create_connection(database)
+
     if conn is not None:
-        print_tasks(conn)
-        print_help_text()
         while True:
+            # clear screen
+            os.system("cls" if os.name == "nt" else "clear")
+            print_tasks(conn)
+            print_help_text()
             command = input("Enter a command: ")
             process_cli_command(conn, command)
             if command == "exit":
                 break
-            print_tasks(conn)
-            print_help_text()
+            elif command.startswith("cat"):
+                # wait so output can be seen
+                input("Press Enter to continue...")
+
         backup_database_as_csv(conn)
         conn.close()
 
