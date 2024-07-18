@@ -7,6 +7,7 @@ import pandas as pd
 from utils.display_tools import pprint_df, pprint_dict
 from utils.sqlite_tools import (
     add_task,
+    backup_database_as_csv,
     create_connection,
     get_task_details,
     get_tasks,
@@ -132,6 +133,7 @@ def main():
                 break
             print_tasks(conn)
             print_help_text()
+        backup_database_as_csv(conn)
         conn.close()
 
 

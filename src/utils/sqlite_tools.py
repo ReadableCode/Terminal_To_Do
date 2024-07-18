@@ -1,6 +1,7 @@
 # %%
 # Imports #
 
+import datetime
 import os
 import sqlite3
 from sqlite3 import Error
@@ -9,6 +10,15 @@ import pandas as pd
 
 # %%
 # Variables #
+
+grandparent_dir = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+)
+data_dir = os.path.join(grandparent_dir, "data")
+
+
+# %%
+# Functions #
 
 
 def create_connection(db_file):
@@ -113,6 +123,25 @@ def delete_task(conn, task_id):
     cursor.execute(sql, (task_id,))
     conn.commit()
     print("Task deleted successfully.")
+
+
+def backup_database_as_csv(conn):
+    """Backup the database as a CSV file."""
+    tasks = get_tasks(conn)
+    current_date_stamp = datetime.datetime.now().strftime("%Y-%m-%d")
+    archive_dir = os.path.join(data_dir, "archive")
+    # mkdirs
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, exist_ok=True)
+    if not os.path.exists(archive_dir):
+        os.makedirs(archive_dir, exist_ok=True)
+    tasks.to_csv(os.path.join(data_dir, "tasks_backup_most_recent.csv"), index=False)
+    tasks.to_csv(
+        os.path.join(data_dir, "archive", f"tasks_backup_{current_date_stamp}.csv"),
+        index=False,
+    )
+    conn.close()
+    print("Database backed up as CSV.")
 
 
 # %%
