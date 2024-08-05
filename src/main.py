@@ -21,7 +21,7 @@ from utils.sqlite_tools import (
 
 grandparent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 data_dir = os.path.join(grandparent_dir, "data")
-ls_swim_lanes = ["priority", "backlog", "todo", "prog", "done"]
+ls_swim_lanes = ["priority", "backlog", "todo", "prog", "validation", "done"]
 
 print(f"Python Version: {sys.version}")
 
