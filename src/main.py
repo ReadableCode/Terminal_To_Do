@@ -2,6 +2,7 @@
 
 import json
 import os
+import platform
 import sys
 
 import pandas as pd
@@ -23,57 +24,81 @@ from utils.sqlite_tools import (
 grandparent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 data_dir = os.path.join(grandparent_dir, "data")
 
-# Ensure paths are fully normalized for Windows paths
-ls_paths_to_check_for_config = [
-    os.path.normpath(
-        os.path.join(grandparent_dir, ".terminal_todo.json")
-    ),  # Normalize the path
-    os.path.normpath(
-        os.path.expanduser("~/.terminal_todo.json")
-    ),  # Expand and normalize the home directory path
-]
-
-print(ls_paths_to_check_for_config)
-
 
 # %%
+# Config #
 
 
-created_config = False
-# if a configuration file does not exist, create it with defaults as json
-if not any([os.path.exists(path) for path in ls_paths_to_check_for_config]):
-    print("No configuration file found. Creating one with defaults.")
-    created_config = True
-    default_ls_swim_lanes = ["priority", "backlog", "todo", "prog", "validation"]
-    default_ls_hide_cols = ["done"]
-    with open(ls_paths_to_check_for_config[0], "w") as f:
-        json.dump(
-            {"swim_lanes": default_ls_swim_lanes, "hide_cols": default_ls_hide_cols}, f
-        )
+def load_config(app_name="terminal_to_do"):
+    """
+    Load the configuration file for the application.
+    Checks user-specific and system-wide configuration locations.
+    If no config is found, it loads the default config from the repo.
 
-# read the configuration file
-for possible_config_path in ls_paths_to_check_for_config:
-    if os.path.exists(possible_config_path):
-        print(f"Using configuration file: {possible_config_path}")
-        with open(possible_config_path, "r") as f:
-            config = json.load(f)
-            ls_swim_lanes = config["swim_lanes"]
-            ls_hide_cols = config["hide_cols"]
+    Returns:
+        config (dict): Configuration loaded from the file.
+    """
+    # Determine base directories for configuration files
+    system = platform.system()
+
+    if system == "Windows":
+        config_home = os.path.join(os.getenv("APPDATA"), app_name)
+    else:
+        config_home = os.path.expanduser(f"~/.config/{app_name}")
+
+    # User-specific config
+    user_config_path = os.path.join(config_home, f"{app_name}_config.json")
+
+    # Paths to check for configuration (first user-specific, then system-wide)
+    ls_paths_to_check_for_config = [user_config_path]
+
+    # Path to the default config in the repo
+    repo_default_config_path = os.path.join(
+        grandparent_dir, f"{app_name}_config_defaults.json"
+    )
+
+    # Ensure the user config directory exists
+    if not os.path.exists(config_home):
+        os.makedirs(config_home)
+
+    # If no configuration file exists, create one from the default config
+    created_config = False
+    if not any(os.path.exists(path) for path in ls_paths_to_check_for_config):
+        print("No configuration file found. Creating one with defaults.")
+        created_config = True
+        with open(repo_default_config_path, "r") as default_file:
+            default_config = json.load(default_file)
+        with open(ls_paths_to_check_for_config[0], "w") as f:
+            json.dump(default_config, f, indent=4)
+
+    # Read the configuration file from the first path that exists
+    config = None
+    for config_path in ls_paths_to_check_for_config:
+        if os.path.exists(config_path):
+            print(f"Using configuration file: {config_path}")
+            with open(config_path, "r") as f:
+                config = json.load(f)
             break
+
+    # If no configuration file was found, raise an error
+    if config is None:
+        raise FileNotFoundError("No configuration file found, could not generate one.")
+
+    return config, created_config, config_path
 
 
 # %%
 # Terminal Tools #
 
 
-def print_header():
+def print_header(created_config, config_path):
     print("Terminal-To-Do")
     print("-" * 30)
     print(f"Running with Python version: {sys.version}")
     if created_config:
-        print(f"Created and using config file: {possible_config_path}\n")
+        print(f"Created and using config file: {config_path}\n")
     else:
-        print(f"Using config file: {possible_config_path}\n")
+        print(f"Using config file: {config_path}\n")
 
 
 def print_tasks(conn):
@@ -93,7 +118,7 @@ def print_tasks(conn):
         title = row["title"]
         status = row["status"]
 
-        if status in ls_hide_cols:
+        if status in LS_HIDE_COLS:
             continue
 
         # make sure the priority and swim lane exist in the dataframe
@@ -134,11 +159,11 @@ def print_tasks(conn):
     df_swim_lanes = pd.DataFrame(ls_rows_for_dataframe)
     # set col order to swim lanes then any not in swim lanes
     df_swim_lanes = df_swim_lanes[
-        ls_swim_lanes
+        LS_SWIM_LANES
         + [
             col
             for col in df_swim_lanes.columns
-            if col not in ls_swim_lanes and col not in ls_hide_cols
+            if col not in LS_SWIM_LANES and col not in LS_HIDE_COLS
         ]
     ]
     pprint_df(df_swim_lanes)
@@ -244,6 +269,14 @@ def print_help_text():
 
 
 def main():
+    config, created_config, config_path = (
+        load_config()
+    )  # Load configuration at the start of the app
+    pprint_dict(config)  # Print the loaded configuration for debugging
+    # Extract swim lanes and hidden columns
+    LS_SWIM_LANES = config["swim_lanes"]
+    LS_HIDE_COLS = config["hide_cols"]
+
     database = os.path.join(data_dir, "tasks.db")
     initialize_database(database)
     conn = create_connection(database)
@@ -252,7 +285,7 @@ def main():
         while True:
             # clear screen
             os.system("cls" if os.name == "nt" else "clear")
-            print_header()
+            print_header(created_config, config_path)
             print_tasks(conn)
             print_help_text()
             command = input("Enter a command: ")
