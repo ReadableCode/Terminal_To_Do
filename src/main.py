@@ -1,5 +1,6 @@
 # %%
 
+import json
 import os
 import sys
 
@@ -21,14 +22,44 @@ from utils.sqlite_tools import (
 
 grandparent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 data_dir = os.path.join(grandparent_dir, "data")
-ls_swim_lanes = ["priority", "backlog", "todo", "prog", "validation"]
-ls_hide_cols = ["done"]
 
-print(f"Python Version: {sys.version}")
+print(f"Terminal-To-Do running with python version: {sys.version}")
+
+# get configuration from file if exists in path of check locations
+ls_paths_to_check_for_config = [
+    os.path.join(grandparent_dir, ".terminal_todo.json"),
+]
+
+default_ls_swim_lanes = ["priority", "backlog", "todo", "prog", "validation"]
+default_ls_hide_cols = ["done"]
+
+# if a configuration file does not exist, create it with defaults as json
+if not any([os.path.exists(path) for path in ls_paths_to_check_for_config]):
+    with open(ls_paths_to_check_for_config[0], "w") as f:
+        json.dump(
+            {"swim_lanes": default_ls_swim_lanes, "hide_cols": default_ls_hide_cols}, f
+        )
+
+# read the configuration file
+for possible_config_path in ls_paths_to_check_for_config:
+    if os.path.exists(possible_config_path):
+        print(f"Using configuration file: {possible_config_path}")
+        with open(possible_config_path, "r") as f:
+            config = json.load(f)
+            ls_swim_lanes = config["swim_lanes"]
+            ls_hide_cols = config["hide_cols"]
+            break
 
 
 # %%
 # Terminal Tools #
+
+
+def print_header():
+    print("Terminal-To-Do")
+    print("-" * 30)
+    print(f"Running with Python version: {sys.version}")
+    print(f"Using config file: {possible_config_path}")
 
 
 def print_tasks(conn):
@@ -207,6 +238,7 @@ def main():
         while True:
             # clear screen
             os.system("cls" if os.name == "nt" else "clear")
+            print_header()
             print_tasks(conn)
             print_help_text()
             command = input("Enter a command: ")
