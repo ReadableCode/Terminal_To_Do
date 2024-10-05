@@ -4,7 +4,7 @@ import os
 import sys
 
 import pandas as pd
-from utils.display_tools import pprint_df, pprint_dict
+from utils.display_tools import pprint_df, pprint_dict, pprint_ls  # noqa F401
 from utils.sqlite_tools import (
     add_task,
     backup_database_as_csv,
@@ -21,7 +21,8 @@ from utils.sqlite_tools import (
 
 grandparent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 data_dir = os.path.join(grandparent_dir, "data")
-ls_swim_lanes = ["priority", "backlog", "todo", "prog", "validation", "done"]
+ls_swim_lanes = ["priority", "backlog", "todo", "prog", "validation"]
+ls_hide_cols = ["done"]
 
 print(f"Python Version: {sys.version}")
 
@@ -31,24 +32,73 @@ print(f"Python Version: {sys.version}")
 
 
 def print_tasks(conn):
+    # Get the tasks from the database
     df_tasks = get_tasks(conn)
+    df_tasks = df_tasks.sort_values(by=["priority"])
 
-    df_display_tasks = pd.DataFrame(columns=ls_swim_lanes)
-    for i, row in df_tasks.iterrows():
+    # Print the first 20 rows for debugging
+    print("df_tasks")
+    pprint_df(df_tasks.head(20))
+
+    # Create a dictionary with swim lanes as keys and empty lists as values
+    # dict_swim_lanes[priority][swim_lane]
+    dict_swim_lanes = {}
+
+    # Populate the dictionary with tasks based on their status (swim lane)
+    for _, row in df_tasks.iterrows():
+        priority = row["priority"]
         task_id = row["id"]
         category = row["category"]
         title = row["title"]
         status = row["status"]
-        priority = row["priority"]
-        df_display_tasks.loc[i, status] = f"({task_id}) {category} - {title}"
-        df_display_tasks.loc[i, "priority"] = priority
 
-    df_display_tasks = df_display_tasks.sort_values(by="priority")
+        if status in ls_hide_cols:
+            continue
 
-    # Use infer_objects() to infer better types
-    df_display_tasks = df_display_tasks.infer_objects()
-    df_display_tasks = df_display_tasks.fillna("")
-    pprint_df(df_display_tasks)
+        # make sure the priority and swim lane exist in the dataframe
+        if priority not in dict_swim_lanes:
+            dict_swim_lanes[priority] = {}
+
+        # make sure the status exists in the dataframe for this priority
+        if status not in dict_swim_lanes[priority]:
+            dict_swim_lanes[priority][status] = []
+
+        # add the task to the swim lane
+        dict_swim_lanes[priority][status].append(f"{task_id}: {category} - {title}")
+
+    print("dict_swim_lanes")
+    pprint_dict(dict_swim_lanes)
+
+    ls_rows_for_dataframe = []
+    for priority, dict_statuses_this_priority in dict_swim_lanes.items():
+        longest_list = max([len(v) for v in dict_statuses_this_priority.values()])
+        for i in range(longest_list):
+            dict_this_row = {}
+            dict_this_row["priority"] = priority
+            for status in df_tasks["status"].unique().tolist():
+                if status in dict_statuses_this_priority:
+                    if i < len(dict_statuses_this_priority[status]):
+                        dict_this_row[status] = dict_statuses_this_priority[status][i]
+                    else:
+                        dict_this_row[status] = ""
+                else:
+                    dict_this_row[status] = ""
+            ls_rows_for_dataframe.append(dict_this_row)
+
+    pprint_ls(ls_rows_for_dataframe)
+
+    # turn the list of dictionaries into a dataframe
+    df_swim_lanes = pd.DataFrame(ls_rows_for_dataframe)
+    # set col order to swim lanes then any not in swim lanes
+    df_swim_lanes = df_swim_lanes[
+        ls_swim_lanes
+        + [
+            col
+            for col in df_swim_lanes.columns
+            if col not in ls_swim_lanes and col not in ls_hide_cols
+        ]
+    ]
+    pprint_df(df_swim_lanes)
 
 
 def print_task_details(conn, task_id):

@@ -101,7 +101,7 @@ def edit_task(conn, task_id, priority, category, title, description, status):
 
     """
     sql = """
-    UPDATE tasks 
+    UPDATE tasks
     SET priority = ?, category = ?, title = ?, description = ?, status = ?
     WHERE id = ?;
     """
