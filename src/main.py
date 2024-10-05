@@ -300,8 +300,6 @@ def main():
         while True:
             # clear screen
             os.system("cls" if os.name == "nt" else "clear")
-            # temp
-            pprint_dict(config)
             print_header()
             print_tasks(conn, config)
             print_help_text()
