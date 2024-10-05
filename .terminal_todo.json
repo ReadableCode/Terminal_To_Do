@@ -1,4 +1,0 @@
-{
-  "swim_lanes": ["priority", "backlog", "todo", "prog", "validation"],
-  "hide_cols": ["done"]
-}

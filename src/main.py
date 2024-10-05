@@ -23,18 +23,29 @@ from utils.sqlite_tools import (
 grandparent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 data_dir = os.path.join(grandparent_dir, "data")
 
-print(f"Terminal-To-Do running with python version: {sys.version}")
-
-# get configuration from file if exists in path of check locations
+# Ensure paths are fully normalized for Windows paths
 ls_paths_to_check_for_config = [
-    os.path.join(grandparent_dir, ".terminal_todo.json"),
+    os.path.normpath(
+        os.path.join(grandparent_dir, ".terminal_todo.json")
+    ),  # Normalize the path
+    os.path.normpath(
+        os.path.expanduser("~/.terminal_todo.json")
+    ),  # Expand and normalize the home directory path
 ]
 
-default_ls_swim_lanes = ["priority", "backlog", "todo", "prog", "validation"]
-default_ls_hide_cols = ["done"]
+print(ls_paths_to_check_for_config)
 
+
+# %%
+
+
+created_config = False
 # if a configuration file does not exist, create it with defaults as json
 if not any([os.path.exists(path) for path in ls_paths_to_check_for_config]):
+    print("No configuration file found. Creating one with defaults.")
+    created_config = True
+    default_ls_swim_lanes = ["priority", "backlog", "todo", "prog", "validation"]
+    default_ls_hide_cols = ["done"]
     with open(ls_paths_to_check_for_config[0], "w") as f:
         json.dump(
             {"swim_lanes": default_ls_swim_lanes, "hide_cols": default_ls_hide_cols}, f
@@ -59,7 +70,10 @@ def print_header():
     print("Terminal-To-Do")
     print("-" * 30)
     print(f"Running with Python version: {sys.version}")
-    print(f"Using config file: {possible_config_path}")
+    if created_config:
+        print(f"Created and using config file: {possible_config_path}\n")
+    else:
+        print(f"Using config file: {possible_config_path}\n")
 
 
 def print_tasks(conn):
