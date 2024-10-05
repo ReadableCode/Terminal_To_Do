@@ -36,10 +36,6 @@ def print_tasks(conn):
     df_tasks = get_tasks(conn)
     df_tasks = df_tasks.sort_values(by=["priority"])
 
-    # Print the first 20 rows for debugging
-    print("df_tasks")
-    pprint_df(df_tasks.head(20))
-
     # Create a dictionary with swim lanes as keys and empty lists as values
     # dict_swim_lanes[priority][swim_lane]
     dict_swim_lanes = {}
@@ -66,9 +62,6 @@ def print_tasks(conn):
         # add the task to the swim lane
         dict_swim_lanes[priority][status].append(f"{task_id}: {category} - {title}")
 
-    print("dict_swim_lanes")
-    pprint_dict(dict_swim_lanes)
-
     ls_rows_for_dataframe = []
     for priority, dict_statuses_this_priority in dict_swim_lanes.items():
         longest_list = max([len(v) for v in dict_statuses_this_priority.values()])
@@ -85,7 +78,12 @@ def print_tasks(conn):
                     dict_this_row[status] = ""
             ls_rows_for_dataframe.append(dict_this_row)
 
-    pprint_ls(ls_rows_for_dataframe)
+        # append a row for a divider
+        dict_this_row = {}
+        dict_this_row["priority"] = "-" * 30
+        for status in df_tasks["status"].unique().tolist():
+            dict_this_row[status] = "-" * 30
+        ls_rows_for_dataframe.append(dict_this_row)
 
     # turn the list of dictionaries into a dataframe
     df_swim_lanes = pd.DataFrame(ls_rows_for_dataframe)
