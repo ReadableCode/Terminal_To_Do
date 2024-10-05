@@ -21,6 +21,7 @@ from utils.sqlite_tools import (
 # %%
 # Variables #
 
+APP_NAME = "terminal_to_do"
 grandparent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 data_dir = os.path.join(grandparent_dir, "data")
 
@@ -29,14 +30,37 @@ data_dir = os.path.join(grandparent_dir, "data")
 # Config #
 
 
-def load_config(app_name="terminal_to_do"):
+def merge_configs(default_config, user_config):
     """
-    Load the configuration file for the application.
-    Checks user-specific and system-wide configuration locations.
-    If no config is found, it loads the default config from the repo.
+    Recursively merges user configuration into the default configuration.
+    If a key exists in both, the user's value will override the default.
+    If a key exists only in the default, it will be retained.
+
+    Args:
+        default_config (dict): The default configuration.
+        user_config (dict): The user configuration.
 
     Returns:
-        config (dict): Configuration loaded from the file.
+        dict: The merged configuration.
+    """
+    for key, value in default_config.items():
+        if key not in user_config:
+            # If the key is not in the user config, set it to the default
+            user_config[key] = value
+        elif isinstance(value, dict) and isinstance(user_config.get(key), dict):
+            # If both default and user config have a dictionary for this key, recurse
+            user_config[key] = merge_configs(value, user_config[key])
+    return user_config
+
+
+def load_config(app_name=APP_NAME):
+    """
+    Load the configuration file for the application.
+    If no config is found, it loads the default config from the repo.
+    User config is merged with the defaults from the repo if any keys are missing.
+
+    Returns:
+        config (dict): Merged configuration loaded from the file.
     """
     # Determine base directories for configuration files
     system = platform.system()
@@ -61,47 +85,43 @@ def load_config(app_name="terminal_to_do"):
     if not os.path.exists(config_home):
         os.makedirs(config_home)
 
+    # Load the default configuration from the repository
+    with open(repo_default_config_path, "r") as default_file:
+        default_config = json.load(default_file)
+
     # If no configuration file exists, create one from the default config
-    created_config = False
     if not any(os.path.exists(path) for path in ls_paths_to_check_for_config):
-        print("No configuration file found. Creating one with defaults.")
-        created_config = True
-        with open(repo_default_config_path, "r") as default_file:
-            default_config = json.load(default_file)
+        print("No user configuration file found. Creating one with defaults.")
         with open(ls_paths_to_check_for_config[0], "w") as f:
             json.dump(default_config, f, indent=4)
 
-    # Read the configuration file from the first path that exists
-    config = None
+    # Load the user configuration if it exists
+    user_config = {}
     for config_path in ls_paths_to_check_for_config:
         if os.path.exists(config_path):
-            print(f"Using configuration file: {config_path}")
+            print(f"Using user configuration file: {config_path}")
             with open(config_path, "r") as f:
-                config = json.load(f)
+                user_config = json.load(f)
             break
 
-    # If no configuration file was found, raise an error
-    if config is None:
-        raise FileNotFoundError("No configuration file found, could not generate one.")
+    # Merge user config with default config (without additional imports)
+    config = merge_configs(default_config, user_config)
 
-    return config, created_config, config_path
+    # Return the merged configuration
+    return config
 
 
 # %%
 # Terminal Tools #
 
 
-def print_header(created_config, config_path):
+def print_header():
     print("Terminal-To-Do")
     print("-" * 30)
     print(f"Running with Python version: {sys.version}")
-    if created_config:
-        print(f"Created and using config file: {config_path}\n")
-    else:
-        print(f"Using config file: {config_path}\n")
 
 
-def print_tasks(conn):
+def print_tasks(conn, config):
     # Get the tasks from the database
     df_tasks = get_tasks(conn)
     df_tasks = df_tasks.sort_values(by=["priority"])
@@ -118,7 +138,7 @@ def print_tasks(conn):
         title = row["title"]
         status = row["status"]
 
-        if status in LS_HIDE_COLS:
+        if status in config["hide_cols"]:
             continue
 
         # make sure the priority and swim lane exist in the dataframe
@@ -159,11 +179,11 @@ def print_tasks(conn):
     df_swim_lanes = pd.DataFrame(ls_rows_for_dataframe)
     # set col order to swim lanes then any not in swim lanes
     df_swim_lanes = df_swim_lanes[
-        LS_SWIM_LANES
+        config["swim_lanes"]
         + [
             col
             for col in df_swim_lanes.columns
-            if col not in LS_SWIM_LANES and col not in LS_HIDE_COLS
+            if col not in config["swim_lanes"] and col not in config["hide_cols"]
         ]
     ]
     pprint_df(df_swim_lanes)
@@ -231,10 +251,10 @@ def add_task_wizard(conn):
     add_task(conn, priority, category, title, description, status)
 
 
-def process_cli_command(conn, command):
+def process_cli_command(conn, command, config):
     command = command.lower()
     if command == "print":
-        print_tasks(conn)
+        print_tasks(conn, config)
     elif command == "exit":
         print("Connection closing.")
     elif command.startswith("cat "):
@@ -269,13 +289,8 @@ def print_help_text():
 
 
 def main():
-    config, created_config, config_path = (
-        load_config()
-    )  # Load configuration at the start of the app
-    pprint_dict(config)  # Print the loaded configuration for debugging
-    # Extract swim lanes and hidden columns
-    LS_SWIM_LANES = config["swim_lanes"]
-    LS_HIDE_COLS = config["hide_cols"]
+    config = load_config(APP_NAME)
+    pprint_dict(config)
 
     database = os.path.join(data_dir, "tasks.db")
     initialize_database(database)
@@ -285,11 +300,13 @@ def main():
         while True:
             # clear screen
             os.system("cls" if os.name == "nt" else "clear")
-            print_header(created_config, config_path)
-            print_tasks(conn)
+            # temp
+            pprint_dict(config)
+            print_header()
+            print_tasks(conn, config)
             print_help_text()
             command = input("Enter a command: ")
-            process_cli_command(conn, command)
+            process_cli_command(conn, command, config)
             if command == "exit":
                 break
             elif command.startswith("cat"):
