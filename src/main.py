@@ -115,10 +115,12 @@ def load_config(app_name=APP_NAME):
 # Terminal Tools #
 
 
-def print_header():
+def print_header(task_description):
     print("Terminal-To-Do")
     print("-" * 30)
     print(f"Running with Python version: {sys.version}")
+    if task_description != "":
+        print(f"Most recent command: {task_description}")
 
 
 def print_tasks(conn, config):
@@ -253,6 +255,7 @@ def add_task_wizard(conn):
 
 def process_cli_command(conn, command, config):
     command = command.lower()
+    task_description = ""
     if command == "print":
         print_tasks(conn, config)
     elif command == "exit":
@@ -263,6 +266,7 @@ def process_cli_command(conn, command, config):
     elif command.startswith("mv "):
         task_id = int(command.split(" ")[1])
         status = command.split(" ")[2]
+        task_description = f"Task {task_id} status updated to {status}."
         change_task_status(conn, task_id, status)
     elif command == "add":
         add_task_wizard(conn)
@@ -271,6 +275,7 @@ def process_cli_command(conn, command, config):
         edit_a_task(conn, task_id)
     else:
         print("Invalid command.")
+    return task_description
 
 
 def print_help_text():
@@ -295,16 +300,17 @@ def main():
     database = os.path.join(data_dir, "tasks.db")
     initialize_database(database)
     conn = create_connection(database)
+    task_description = ""
 
     if conn is not None:
         while True:
             # clear screen
             os.system("cls" if os.name == "nt" else "clear")
-            print_header()
+            print_header(task_description)
             print_tasks(conn, config)
             print_help_text()
             command = input("Enter a command: ")
-            process_cli_command(conn, command, config)
+            task_description = process_cli_command(conn, command, config)
             if command == "exit":
                 break
             elif command.startswith("cat"):
