@@ -108,48 +108,37 @@ def load_config(app_name=APP_NAME):
 # Database Interactions: SQLite #
 
 
-def create_connection(db_file):
-    """Create a database connection to an SQLite database."""
-    conn = None
-    try:
-        conn = sqlite3.connect(db_file)
-        print(f"Connected to SQLite database: {db_file}")
-    except Error as e:
-        print(f"Error: {e}")
+def create_sqlite_connection(db_file):
+    print(f"Connecting to SQLite database: {db_file}")
+    # Check if the file exists
+    if not os.path.exists(db_file):
+        print(f"Database file {db_file} does not exist. Creating a new database.")
+    conn = sqlite3.connect(db_file)
+
+    # make sure the table exists
+    sql_create_tasks_table = """
+    CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        priority INTEGER DEFAULT 0,
+        category TEXT,
+        title TEXT NOT NULL,
+        description TEXT,
+        status TEXT NOT NULL
+    );
+    """
+    cursor = conn.cursor()
+    cursor.execute(sql_create_tasks_table)
+    print("Tasks table created or already exists.")
+
     return conn
 
 
-def create_table(conn):
-    """Create a table for tasks if it doesn't exist."""
-    try:
-        sql_create_tasks_table = """
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            priority INTEGER DEFAULT 0,
-            category TEXT,
-            title TEXT NOT NULL,
-            description TEXT,
-            status TEXT NOT NULL
-        );
-        """
-        cursor = conn.cursor()
-        cursor.execute(sql_create_tasks_table)
-        print("Tasks table created or already exists.")
-    except Error as e:
-        print(f"Error: {e}")
+if __name__ == "__main__":
+    sqlite_db_file_path = os.path.join(data_dir, "tasks.db")
+    conn = create_sqlite_connection(sqlite_db_file_path)
 
 
-def initialize_database(db_file):
-    """Initialize the database and create the tasks table."""
-    if not os.path.exists(db_file):
-        conn = create_connection(db_file)
-        if conn is not None:
-            create_table(conn)
-            conn.close()
-        else:
-            print("Error! Cannot create the database connection.")
-    else:
-        print("Database already exists.")
+# %%
 
 
 def add_task(conn, priority, category, title, description, status):
@@ -165,7 +154,7 @@ def add_task(conn, priority, category, title, description, status):
 
     """
     sql = """
-    INSERT INTO tasks (priority, category, title, description, status) 
+    INSERT INTO tasks (priority, category, title, description, status)
     VALUES (?, ?, ?, ?, ?);
     """
     cursor = conn.cursor()
@@ -279,6 +268,12 @@ def print_header(task_description):
 def print_tasks(conn, config):
     # Get the tasks from the database
     df_tasks = get_tasks(conn)
+
+    # if empty then print empty
+    if df_tasks.empty:
+        print("--- No tasks found ---")
+        return
+
     df_tasks = df_tasks.sort_values(by=["priority"])
 
     # Create a dictionary with swim lanes as keys and empty lists as values
@@ -333,13 +328,14 @@ def print_tasks(conn, config):
     # turn the list of dictionaries into a dataframe
     df_swim_lanes = pd.DataFrame(ls_rows_for_dataframe)
     # set col order to swim lanes then any not in swim lanes
+    ls_cols_to_print = config["swim_lanes"] + [
+        col
+        for col in df_swim_lanes.columns
+        if col not in config["swim_lanes"] and col not in config["hide_cols"]
+    ]
+    # prevent cols that dont exist from throwing errors
     df_swim_lanes = df_swim_lanes[
-        config["swim_lanes"]
-        + [
-            col
-            for col in df_swim_lanes.columns
-            if col not in config["swim_lanes"] and col not in config["hide_cols"]
-        ]
+        [col for col in ls_cols_to_print if col in df_swim_lanes.columns]
     ]
     pprint_df(df_swim_lanes)
 
@@ -450,9 +446,6 @@ def main():
     config = load_config(APP_NAME)
     pprint_dict(config)
 
-    database = os.path.join(data_dir, "tasks.db")
-    initialize_database(database)
-    conn = create_connection(database)
     task_description = ""
 
     if conn is not None:
