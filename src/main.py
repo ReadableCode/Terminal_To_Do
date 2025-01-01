@@ -108,9 +108,9 @@ def load_config(app_name=APP_NAME):
 # Database Interactions: SQLite #
 
 
-def create_sqlite_connection(db_file):
+def get_sqlite_connection(db_file):
     print(f"Connecting to SQLite database: {db_file}")
-    # Check if the file exists
+
     if not os.path.exists(db_file):
         print(f"Database file {db_file} does not exist. Creating a new database.")
     conn = sqlite3.connect(db_file)
@@ -133,12 +133,8 @@ def create_sqlite_connection(db_file):
     return conn
 
 
-if __name__ == "__main__":
-    sqlite_db_file_path = os.path.join(data_dir, "tasks.db")
-    conn = create_sqlite_connection(sqlite_db_file_path)
-
-
 # %%
+# Functions: Transactions #
 
 
 def add_task(conn, priority, category, title, description, status):
@@ -422,6 +418,10 @@ def process_cli_command(conn, command, config):
     elif command.startswith("edit "):
         task_id = int(command.split(" ")[1])
         edit_a_task(conn, task_id)
+    elif command == "help":
+        print_help_text()
+    elif command == "show config":
+        pprint_dict(config)
     else:
         print("Invalid command.")
     return task_description
@@ -435,6 +435,8 @@ def print_help_text():
     print("add -- add a task")
     print("exit -- exit the program")
     print("edit <task_id> -- edit a task")
+    print("help -- print this help text")
+    print("show config -- print the configuration")
     print("")
 
 
@@ -446,6 +448,8 @@ def main():
     config = load_config(APP_NAME)
     pprint_dict(config)
 
+    sqlite_db_file_path = os.path.join(data_dir, "tasks.db")
+    conn = get_sqlite_connection(sqlite_db_file_path)
     task_description = ""
 
     if conn is not None:
@@ -459,7 +463,11 @@ def main():
             task_description = process_cli_command(conn, command, config)
             if command == "exit":
                 break
-            elif command.startswith("cat"):
+            elif (
+                command.startswith("cat")
+                or command.startswith("show")
+                or command.startswith("help")
+            ):
                 # wait so output can be seen
                 input("Press Enter to continue...")
 
