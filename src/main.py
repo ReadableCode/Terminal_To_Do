@@ -6,7 +6,6 @@ import os
 import platform
 import sqlite3
 import sys
-from sqlite3 import Error
 
 import pandas as pd
 from utils.display_tools import pprint_df, pprint_dict, pprint_ls  # noqa F401
@@ -16,8 +15,10 @@ from utils.display_tools import pprint_df, pprint_dict, pprint_ls  # noqa F401
 
 APP_NAME = "terminal_to_do"
 grandparent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-data_dir = os.path.join(grandparent_dir, "data")
-
+great_grandparent_dir = os.path.dirname(grandparent_dir)
+data_dir = os.path.join(
+    great_grandparent_dir, "Syncthing_Synced", "terminal_to_do_data"
+)
 
 # %%
 # Config #
