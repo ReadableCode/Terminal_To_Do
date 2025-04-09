@@ -472,7 +472,7 @@ def main():
     if conn is not None:
         while True:
             # clear screen
-            # os.system("cls" if os.name == "nt" else "clear")
+            os.system("cls" if os.name == "nt" else "clear")
             print_header(task_description)
             print_tasks(conn, config)
             print_help_text()
