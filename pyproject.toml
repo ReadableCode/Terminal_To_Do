@@ -5,6 +5,7 @@ description = "Terminal_To_Do"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "black>=25.1.0",
+    "boto3>=1.37.30",
     "datetime>=5.5",
     "flake8>=7.1.2",
     "ipykernel>=6.29.5",

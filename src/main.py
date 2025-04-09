@@ -9,16 +9,21 @@ import sys
 
 import pandas as pd
 from utils.display_tools import pprint_df, pprint_dict, pprint_ls  # noqa F401
+from utils.s3_tools import (  # noqa F401
+    download_file_from_s3,
+    ensure_bucket_exists,
+    upload_file_to_s3,
+)
 
 # %%
 # Variables #
 
 APP_NAME = "terminal_to_do"
-grandparent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-great_grandparent_dir = os.path.dirname(grandparent_dir)
-data_dir = os.path.join(
-    great_grandparent_dir, "Syncthing_Synced", "terminal_to_do_data"
-)
+STORAGE_BUCKET_NAME = "terminal-to-do"
+
+grandparent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+
 
 # %%
 # Config #
@@ -450,13 +455,24 @@ def main():
     pprint_dict(config)
 
     sqlite_db_file_path = os.path.join(data_dir, "tasks.db")
+
+    # download sqlite from s3
+    ensure_bucket_exists(STORAGE_BUCKET_NAME)
+    print("Downloading sqlite from s3...")
+    download_file_from_s3(
+        STORAGE_BUCKET_NAME,
+        "tasks.db",
+        sqlite_db_file_path,
+    )
+    print("Download complete.")
+
     conn = get_sqlite_connection(sqlite_db_file_path)
     task_description = ""
 
     if conn is not None:
         while True:
             # clear screen
-            os.system("cls" if os.name == "nt" else "clear")
+            # os.system("cls" if os.name == "nt" else "clear")
             print_header(task_description)
             print_tasks(conn, config)
             print_help_text()
@@ -474,6 +490,15 @@ def main():
 
         backup_database_as_csv(conn)
         conn.close()
+
+        print("Reuploading sqlite to s3...")
+        # reupload sqlite to s3
+        upload_file_to_s3(
+            sqlite_db_file_path,
+            STORAGE_BUCKET_NAME,
+            "tasks.db",
+        )
+        print("Reupload complete.")
 
 
 # %%
