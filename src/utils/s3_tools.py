@@ -81,32 +81,3 @@ def download_file_from_s3(bucket_name, s3_key, local_file_path):
 
 
 # %%
-# Functions #
-
-
-# # Upload a file
-# s3.upload_file(
-#     os.path.join(data_dir, "packing_list.csv"),  # local file path
-#     "packing-data",  # bucket name
-#     "packing_list.csv",  # S3 key (remote filename)
-# )
-# # Download a file
-# s3.download_file(
-#     "packing-data",
-#     "packing_list.csv",
-#     os.path.join(data_dir, "packing_list_downloaded.csv"),
-# )
-
-# df_re_read = pd.read_csv(
-#     os.path.join(data_dir, "packing_list_downloaded.csv"),
-# )
-
-# print("Re-read DataFrame")
-# pprint_df(df_re_read.head())
-
-# # %%
-
-# ensure_bucket_exists("packing-data")
-# list_bucket_contents("packing-data")
-
-# packing_list.csv
