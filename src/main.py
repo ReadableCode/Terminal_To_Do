@@ -492,12 +492,20 @@ def main():
         conn.close()
 
         print("Reuploading sqlite to s3...")
-        # reupload sqlite to s3
-        upload_file_to_s3(
-            sqlite_db_file_path,
-            STORAGE_BUCKET_NAME,
-            "tasks.db",
-        )
+        while True:
+            # reupload sqlite to s3
+            result = upload_file_to_s3(
+                sqlite_db_file_path,
+                STORAGE_BUCKET_NAME,
+                "tasks.db",
+            )
+            if result:
+                break
+            else:
+                print("Retrying upload in 5 seconds...")
+                import time
+
+                time.sleep(5)
         print("Reupload complete.")
 
 
