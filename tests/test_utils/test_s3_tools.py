@@ -5,21 +5,19 @@ import datetime
 import os
 
 import pandas as pd
-from config_test_utils import data_dir
-from src.utils.display_tools import pprint_df, print_logger  # noqa: F401
-from src.utils.s3_tools import (
+from readable_utils.display_tools import pprint_df, print_logger  # noqa: F401
+from readable_utils.s3_tools import (
     download_file_from_s3,
     ensure_bucket_exists,
     list_bucket_contents,
     upload_file_to_s3,
 )
-from test_tools import get_results_of_tests
 
 # %%
 # Tests #
 
 
-def test_write_to_bucket():
+def test_write_to_bucket(tmp_path):
     current_datetime_string = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # create dataframe
     df = pd.DataFrame(
@@ -37,8 +35,8 @@ def test_write_to_bucket():
     )
     pprint_df(df)
 
-    # write to data dir as csv
-    df.to_csv(os.path.join(data_dir, "test.csv"), index=False)
+    # write to a temp dir as csv
+    df.to_csv(os.path.join(tmp_path, "test.csv"), index=False)
 
     # ensure bucket
     ensure_bucket_exists("test-bucket")
@@ -47,7 +45,7 @@ def test_write_to_bucket():
 
     # upload to s3
     upload_file_to_s3(
-        os.path.join(data_dir, "test.csv"),  # local file path
+        os.path.join(tmp_path, "test.csv"),  # local file path
         "test-bucket",  # bucket name
         "test.csv",  # S3 key (remote filename)
     )
@@ -56,11 +54,11 @@ def test_write_to_bucket():
     download_file_from_s3(
         "test-bucket",
         "test.csv",
-        os.path.join(data_dir, "test_downloaded.csv"),
+        os.path.join(tmp_path, "test_downloaded.csv"),
     )
     # read from s3
     df_re_read = pd.read_csv(
-        os.path.join(data_dir, "test_downloaded.csv"),
+        os.path.join(tmp_path, "test_downloaded.csv"),
     )
     print("Re-read DataFrame")
     pprint_df(df_re_read.head())
@@ -76,17 +74,6 @@ def test_write_to_bucket():
 
     # check that datetime in dataframe columns
     assert current_datetime_parsed in sheet_datetimes
-
-
-# %%
-# Main #
-
-if __name__ == "__main__":
-    get_results_of_tests(
-        [
-            test_write_to_bucket,
-        ]
-    )
 
 
 # %%

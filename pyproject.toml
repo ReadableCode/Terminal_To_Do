@@ -5,21 +5,13 @@ description = "Terminal_To_Do"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "black>=25.1.0",
-    "boto3>=1.37.30",
-    "datetime>=5.5",
     "flake8>=7.1.2",
     "ipykernel>=6.29.5",
     "isort>=6.0.1",
-    "numpy>=2.2.3",
     "pandas>=2.2.3",
-    "pyarrow>=19.0.1",
-    "pygsheets>=2.0.6",
     "pytest>=8.3.5",
     "python-dotenv>=1.0.1",
-    "requests>=2.32.3",
-    "streamlit>=1.43.1",
-    "tabulate>=0.9.0",
-    "tqdm>=4.67.1",
+    "readable-utils[s3]",
 ]
 
 [tool.flake8]
@@ -44,3 +36,6 @@ known_first_party = ["dotenv"]
 [tool.mypy]
 ignore_missing_imports = true
 show_error_codes = true
+
+[tool.uv.sources]
+readable-utils = { git = "ssh://git@github.com/ReadableCode/readable_utils.git", tag = "v0.1.1" }

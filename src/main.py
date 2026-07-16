@@ -8,8 +8,8 @@ import sqlite3
 import sys
 
 import pandas as pd
-from utils.display_tools import pprint_df, pprint_dict, pprint_ls  # noqa F401
-from utils.s3_tools import (  # noqa F401
+from readable_utils.display_tools import pprint_df, pprint_dict, pprint_ls  # noqa F401
+from readable_utils.s3_tools import (  # noqa F401
     download_file_from_s3,
     ensure_bucket_exists,
     upload_file_to_s3,
