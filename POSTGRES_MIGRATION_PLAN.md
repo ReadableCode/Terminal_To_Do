@@ -115,8 +115,8 @@ Split it; the storage seam is the whole point:
 |---|---|
 | `src/store.py` (new) | Copy the reference app's `store.py`. `add_task`/`edit_task`/`delete_task`/list-and-filter become PostgREST calls with `Accept-Profile`/`Content-Profile` pinned. |
 | `src/bootstrap.py` (new) | Copy the reference app's `bootstrap.py`. `SCHEMA_VERSION = 1`. Runs at CLI start; the version gate makes it a cheap no-op after the first run. |
-| `src/auth.py`, `src/users.py`, `src/users_cli.py` (new) | Copy the reference app's. Token cached to a mode-`0600` file under the user config dir so the CLI does not prompt every invocation; the cache holds only the JWT, never the password. |
-| `src/config.py` (new) | `APP_SCHEMA`, `POSTGREST_URL` (from the environment), `AUTH_URL` if applicable, `POSTGRES_*` for bootstrap only. No fallback store. |
+| `src/auth.py`, `src/users.py`, `src/users_cli.py` (new) | Copy the reference app's: login and hashing come from the postgrest-auth library (a uv git dependency, conventions §4). Token cached to a mode-`0600` file under the user config dir so the CLI does not prompt every invocation; the cache holds only the JWT, never the password. |
+| `src/config.py` (new) | `APP_SCHEMA`, `POSTGREST_URL` and the JWT secret (from the environment), `POSTGRES_*` for bootstrap and login. No fallback store. |
 | `src/main.py` | Keeps the UI and the command loop. Every `sqlite3` import, `conn` argument and `get_sqlite_connection` call goes. |
 | `pyproject.toml` | Drop the `readable_utils.s3_tools` dependency if nothing else in the repo uses it. Check before removing; `readable_utils` is shared. |
 | `.gitignore` / `data/` | `data/tasks.db` stops being written. Leave the existing file and the CSV archive on disk (section 4). |
@@ -149,17 +149,20 @@ Write `scripts/import_sqlite.py`, run once per source database:
   definition; PostgREST must be recreated.
 - No container, reverse-proxy config or DNS entry. This app is not deployed as
   a container; it is a CLI that talks to the shared PostgREST from wherever it
-  runs. That is a legitimate shape, not an omission.
+  runs. That is a legitimate shape, not an omission. Login runs in-process,
+  so the machine also needs the superuser `POSTGRES_*` connection (LAN or
+  Tailscale), the same as load-log's TUI.
 
 ## 6. Auth: no existing users to protect, but still standard
 
 Unlike some of the other apps, this one has **no accounts today**, so there is
 no constraint against forcing password resets. Follow the conventions anyway
 (section 2.1 `users` table, standard login, standard token) so all apps stay
-uniform and this one is not a special case when the auth decision lands.
+uniform.
 
-Do not implement, change, or unify auth beyond copying what the reference app
-does today. The unification decision is pending.
+The auth decision has landed: every app logs in through the postgrest-auth
+library in-process (conventions §4). Do not write auth code beyond copying
+what the reference app does.
 
 ## 7. Explicitly out of scope
 
