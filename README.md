@@ -18,7 +18,11 @@ or account, while still syncing between computers.
 
 1. Loads the config (see [Configuration](#configuration)) and prints it.
 2. Makes sure the bucket `terminal-to-do` exists, then downloads `tasks.db`
-   from it to `data/tasks.db`. A failed download is printed, not fatal.
+   from it to `data/tasks.db`. If the download fails, it asks what to do:
+   retry, use the existing local `data/tasks.db` (only offered when there is
+   one), start a new empty task list (only when there is no local copy), or
+   quit without touching the bucket. Whatever is opened is uploaded over the
+   bucket copy on exit, so this is never decided silently.
 3. Opens `data/tasks.db`, creating the file and the `tasks` table if needed:
    `id`, `priority` (integer, default 0), `category`, `title`, `description`,
    `status`.
@@ -100,6 +104,14 @@ real bucket, so they need the same `.env`:
 uv run pytest
 ```
 
+Lint and format with ruff (configured in `pyproject.toml`; installed with the
+dev group by `uv sync`):
+
+```bash
+uv run ruff check .
+uv run ruff format .
+```
+
 ### Windows pyenv setup
 
 The repo pins Python 3.12.4 in `.python-version`. To get that version on
@@ -142,7 +154,6 @@ pyenv shell 3.12.4
 ## Layout
 
 - `src/main.py`: the app (config, SQLite access, board rendering, command loop, S3 sync).
-- `src/config.py`: path helper that creates `data/`, `logs/` and other working folders; not used by `main.py`.
 - `terminal_to_do_config_defaults.json`: default board config.
 - `POSTGRES_MIGRATION_PLAN.md`: plan for replacing the SQLite file sync.
 - `docs/screenshots/`: README images, made from fake sample data.

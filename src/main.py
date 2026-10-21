@@ -6,10 +6,11 @@ import os
 import platform
 import sqlite3
 import sys
+import time
 
 import pandas as pd
-from readable_utils.display_tools import pprint_df, pprint_dict, pprint_ls  # noqa F401
-from readable_utils.s3_tools import (  # noqa F401
+from readable_utils.display_tools import pprint_df, pprint_dict
+from readable_utils.s3_tools import (
     download_file_from_s3,
     ensure_bucket_exists,
     upload_file_to_s3,
@@ -76,9 +77,7 @@ def load_config(app_name=APP_NAME):
     ls_paths_to_check_for_config = [user_config_path]
 
     # Path to the default config in the repo
-    repo_default_config_path = os.path.join(
-        grandparent_dir, f"{app_name}_config_defaults.json"
-    )
+    repo_default_config_path = os.path.join(grandparent_dir, f"{app_name}_config_defaults.json")
 
     # Ensure the user config directory exists
     if not os.path.exists(config_home):
@@ -331,14 +330,10 @@ def print_tasks(conn, config):
     df_swim_lanes = pd.DataFrame(ls_rows_for_dataframe)
     # set col order to swim lanes then any not in swim lanes
     ls_cols_to_print = config["swim_lanes"] + [
-        col
-        for col in df_swim_lanes.columns
-        if col not in config["swim_lanes"] and col not in config["hide_cols"]
+        col for col in df_swim_lanes.columns if col not in config["swim_lanes"] and col not in config["hide_cols"]
     ]
     # prevent cols that dont exist from throwing errors
-    df_swim_lanes = df_swim_lanes[
-        [col for col in ls_cols_to_print if col in df_swim_lanes.columns]
-    ]
+    df_swim_lanes = df_swim_lanes[[col for col in ls_cols_to_print if col in df_swim_lanes.columns]]
     pprint_df(df_swim_lanes)
 
 
@@ -370,9 +365,7 @@ def edit_a_task(conn, task_id):
 
     # get description
     description = task["description"]
-    description = (
-        input(f"Enter the description (default:[{description}]): ") or description
-    )
+    description = input(f"Enter the description (default:[{description}]): ") or description
 
     # get status
     status = task["status"]
@@ -447,6 +440,57 @@ def print_help_text():
 
 
 # %%
+# Storage #
+
+
+def fetch_task_database(sqlite_db_file_path):
+    """Download tasks.db from the bucket, or ask what to do when that fails.
+
+    The file is uploaded back over the bucket copy on exit, so starting with an
+    empty or stale database must be a choice, never a silent fallback.
+
+    Returns:
+        bool: True to open sqlite_db_file_path, False to quit.
+    """
+    os.makedirs(data_dir, exist_ok=True)
+    download_path = sqlite_db_file_path + ".download"
+    ensure_bucket_exists(STORAGE_BUCKET_NAME)
+
+    while True:
+        if os.path.exists(download_path):
+            os.remove(download_path)
+        print("Downloading sqlite from s3...")
+        download_file_from_s3(STORAGE_BUCKET_NAME, "tasks.db", download_path)
+        if os.path.exists(download_path):
+            os.replace(download_path, sqlite_db_file_path)
+            print("Download complete.")
+            return True
+
+        has_local_copy = os.path.exists(sqlite_db_file_path)
+        print(f"Could not download tasks.db from bucket '{STORAGE_BUCKET_NAME}'.")
+        print("Whatever you open now is uploaded over the bucket copy on exit.")
+        print("r -- retry the download")
+        if has_local_copy:
+            print(f"l -- use the local copy at {sqlite_db_file_path}")
+        print("n -- start a new, empty task list")
+        print("q -- quit")
+        choice = input("Choose: ").strip().lower()
+
+        if choice == "r":
+            continue
+        if choice == "l" and has_local_copy:
+            return True
+        if choice == "n":
+            if has_local_copy:
+                print(f"A local copy exists at {sqlite_db_file_path}; choose l to use it or move it aside first.")
+                continue
+            return True
+        if choice == "q":
+            return False
+        print("Invalid choice.")
+
+
+# %%
 # Main #
 
 
@@ -456,15 +500,9 @@ def main():
 
     sqlite_db_file_path = os.path.join(data_dir, "tasks.db")
 
-    # download sqlite from s3
-    ensure_bucket_exists(STORAGE_BUCKET_NAME)
-    print("Downloading sqlite from s3...")
-    download_file_from_s3(
-        STORAGE_BUCKET_NAME,
-        "tasks.db",
-        sqlite_db_file_path,
-    )
-    print("Download complete.")
+    if not fetch_task_database(sqlite_db_file_path):
+        print("Exiting without touching the bucket.")
+        return
 
     conn = get_sqlite_connection(sqlite_db_file_path)
     task_description = ""
@@ -480,11 +518,7 @@ def main():
             task_description = process_cli_command(conn, command, config)
             if command == "exit":
                 break
-            elif (
-                command.startswith("cat")
-                or command.startswith("show")
-                or command.startswith("help")
-            ):
+            elif command.startswith("cat") or command.startswith("show") or command.startswith("help"):
                 # wait so output can be seen
                 input("Press Enter to continue...")
 
@@ -503,8 +537,6 @@ def main():
                 break
             else:
                 print("Retrying upload in 5 seconds...")
-                import time
-
                 time.sleep(5)
         print("Reupload complete.")
 

@@ -5,7 +5,7 @@ import datetime
 import os
 
 import pandas as pd
-from readable_utils.display_tools import pprint_df, print_logger  # noqa: F401
+from readable_utils.display_tools import pprint_df
 from readable_utils.s3_tools import (
     download_file_from_s3,
     ensure_bucket_exists,
@@ -64,13 +64,8 @@ def test_write_to_bucket(tmp_path):
     pprint_df(df_re_read.head())
 
     # Convert both the current_datetime_string and the Datetime column values to datetime objects
-    sheet_datetimes = [
-        datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
-        for dt in df["Datetime"].values.tolist()
-    ]
-    current_datetime_parsed = datetime.datetime.strptime(
-        current_datetime_string, "%Y-%m-%d %H:%M:%S"
-    )
+    sheet_datetimes = [datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M:%S") for dt in df["Datetime"].values.tolist()]
+    current_datetime_parsed = datetime.datetime.strptime(current_datetime_string, "%Y-%m-%d %H:%M:%S")
 
     # check that datetime in dataframe columns
     assert current_datetime_parsed in sheet_datetimes
